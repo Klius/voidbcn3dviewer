@@ -1,6 +1,7 @@
 //Basic Variable Declaration
 var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,directionalLight,loader,Object,mirror;
 var screen;
+var group;
 function init(){
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x000000 );
@@ -14,6 +15,10 @@ function init(){
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.gammaInput = true;
     renderer.gammaOutput = true;
+    var size = 20;
+    var divisions = 20;
+    gridHelper = new THREE.GridHelper( size, divisions );
+    scene.add( gridHelper );
     //CONTROLS
     document.getElementById("viewport").appendChild( renderer.domElement );
     controls = new THREE.OrbitControls(camera,renderer.domElement);
@@ -27,8 +32,8 @@ function init(){
     video = document.getElementById( 'video' );
     video.play();
     vtex = new THREE.VideoTexture( video );
-    vtex.wrapS = THREE.RepeatWrapping;
-    vtex.wrapT = THREE.RepeatWrapping;
+    vtex.wrapS = THREE.ClampToEdgeWrapping;
+    vtex.wrapT = THREE.ClampToEdgeWrapping;
     //vtex.flipY = false
     vtex.center = new THREE.Vector2( 0.5, 0.5 );
     //vtex.rotation= 1.5708
@@ -51,7 +56,6 @@ function init(){
     */
     light.shadow.mapSize.width = 512;
     light.shadow.mapSize.height = 512;
-
     light.shadow = new THREE.LightShadow(new THREE.PerspectiveCamera(60, 1, 1, 2500));//without this there are no shadows\\*0 /
     scene.add( light );
     lightHelper = new THREE.PointLightHelper( light );
@@ -77,24 +81,26 @@ function init(){
     } );
     mirror.position.y = -0.01;
     mirror.rotateX( - Math.PI / 2 );
-   // scene.add( mirror );
+    scene.add( mirror );
     //ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
     //scene.add( ambientLight );
-    var size = 500;
-    var divisions = 400;
-    gridHelper = new THREE.GridHelper( size, divisions );
-    scene.add( gridHelper );
+    
     loader = new THREE.GLTFLoader();
     loadScene();
         /*
-    debug box
+    Monitor Screen
     */
    var geometry = new THREE.BoxGeometry( 1.7, 1.7, 1.7 );
    var material = new THREE.MeshBasicMaterial( {map:vtex} );
    screen = new THREE.Mesh( geometry, material );
    screen.position.set(0, 1, 0);
-   scene.add( screen );
+   //group
+   group = new THREE.Group();
+   group.add(screen);
+   scene.add( group );
     window.addEventListener( 'resize', onWindowResize, false );
+    window.addEventListener( "mousedown", onDocumentMouseClick, false );
+
 }
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -123,7 +129,7 @@ function loadScene(){
                 }
             });
             object = gltf.scene
-            scene.add(object);
+            group.add(object);
         },
         function ( xhr ) {
             console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
@@ -131,6 +137,33 @@ function loadScene(){
         console.error(error);
         }
     );
+}
+//raycasting
+var INTERSECTED = null;
+var raycaster = new THREE.Raycaster();
+var mouseVector = new THREE.Vector3();
+function onDocumentMouseClick( event ) {
+	event.preventDefault();
+    var intersects = getIntersects(event.layerX, event.layerY );
+		if ( intersects.length > 0 ) {
+			if ( INTERSECTED != intersects[ 0 ].object ) {
+				if ( INTERSECTED ) INTERSECTED.material.color.setHex( 0xffffff  );//reset older intersected
+                INTERSECTED = intersects[ 0 ].object;
+			    //INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+				INTERSECTED.material.color.setHex( 0xffff00 );
+			}
+		} else {
+			if ( INTERSECTED ) INTERSECTED.material.color.setHex( 0xffffff );
+					INTERSECTED = null;
+		}
+
+}
+function getIntersects( x, y ) {
+	x = ( x / window.innerWidth ) * 2 - 1;
+	y = - ( y / window.innerHeight ) * 2 + 1;
+	mouseVector.set( x, y, 0.5 );
+	raycaster.setFromCamera( mouseVector, camera );
+	return raycaster.intersectObjects( group.children,true);
 }
 init();
 animate();
