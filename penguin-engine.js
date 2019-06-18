@@ -2,6 +2,9 @@
 var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,directionalLight,loader,Object,mirror;
 var screen;
 var group;
+var computer = {on:false}
+var videos = [];
+var vtexs = [];
 function init(){
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x000000 );
@@ -29,14 +32,7 @@ function init(){
     //controls.maxPolarAngle = 1.5;
     controls.update();
     //VIDEOTEXTURE
-    video = document.getElementById( 'video' );
-    video.play();
-    vtex = new THREE.VideoTexture( video );
-    vtex.wrapS = THREE.ClampToEdgeWrapping;
-    vtex.wrapT = THREE.ClampToEdgeWrapping;
-    //vtex.flipY = false
-    vtex.center = new THREE.Vector2( 0.5, 0.5 );
-    //vtex.rotation= 1.5708
+    loadVideoTextures()
     /*LIGHTS*/
     ambientLight = new THREE.AmbientLight( 0x404040, 0.5 );
     scene.add( ambientLight );
@@ -72,7 +68,7 @@ function init(){
         MIRROR
     */
     var geometry = new THREE.CircleBufferGeometry( 40, 64 );
-    mirror = new THREE.Reflector( geometry, {
+ /*   mirror = new THREE.Reflector( geometry, {
         clipBias: 0.003,
         textureWidth:  window.innerWidth * window.devicePixelRatio,
         textureHeight: window.innerHeight * window.devicePixelRatio,
@@ -82,18 +78,20 @@ function init(){
     mirror.position.y = -0.01;
     mirror.rotateX( - Math.PI / 2 );
     scene.add( mirror );
-    //ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
+    *///ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
     //scene.add( ambientLight );
     
     loader = new THREE.GLTFLoader();
     loadScene();
-        /*
+    /*
     Monitor Screen
     */
-   var geometry = new THREE.BoxGeometry( 1.7, 1.7, 1.7 );
+   var geometry = new THREE.BoxGeometry( 1.7, 1.7, 1 );
    var material = new THREE.MeshBasicMaterial( {map:vtex} );
    screen = new THREE.Mesh( geometry, material );
-   screen.position.set(0, 1, 0);
+   screen.position.set(0, 1.4, -0.3);
+   screen.scale.z=0.1
+   screen.name="display";
    //group
    group = new THREE.Group();
    group.add(screen);
@@ -138,6 +136,18 @@ function loadScene(){
         }
     );
 }
+function loadVideoTextures(){
+    videoNames = ["video-boot","video-ashes"]
+    for(i=0;i<videoNames.length;i++){
+        video = document.getElementById( videoNames[i] );
+        vtex = new THREE.VideoTexture( video );
+        vtex.wrapS = THREE.ClampToEdgeWrapping;
+        vtex.wrapT = THREE.ClampToEdgeWrapping;
+        vtex.center = new THREE.Vector2( 0.5, 0.5 );
+        videos.push(video);
+        vtexs.push(vtex);
+    }
+}
 //raycasting
 var INTERSECTED = null;
 var raycaster = new THREE.Raycaster();
@@ -146,16 +156,18 @@ function onDocumentMouseClick( event ) {
 	event.preventDefault();
     var intersects = getIntersects(event.layerX, event.layerY );
 		if ( intersects.length > 0 ) {
-			if ( INTERSECTED != intersects[ 0 ].object ) {
-				if ( INTERSECTED ) INTERSECTED.material.color.setHex( 0xffffff  );//reset older intersected
+				//if ( INTERSECTED ) INTERSECTED.material.color.setHex( 0xffffff  );//reset older intersected
                 INTERSECTED = intersects[ 0 ].object;
 			    //INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
-				INTERSECTED.material.color.setHex( 0xffff00 );
-			}
-		} else {
-			if ( INTERSECTED ) INTERSECTED.material.color.setHex( 0xffffff );
-					INTERSECTED = null;
-		}
+                console.log(INTERSECTED)
+                //INTERSECTED.material.color.setHex( 0xffff00 );
+                if (INTERSECTED.name == "powerbutton"){
+                    showDisplay();
+                }
+                else if(INTERSECTED.name=="display"){
+                    startVideo();
+                }
+            }
 
 }
 function getIntersects( x, y ) {
@@ -164,6 +176,25 @@ function getIntersects( x, y ) {
 	mouseVector.set( x, y, 0.5 );
 	raycaster.setFromCamera( mouseVector, camera );
 	return raycaster.intersectObjects( group.children,true);
+}
+function showDisplay(){
+    if (computer.on ==false){
+        var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
+        screen.material = mat;
+        screen.scale.z = 1;
+        videos[0].play()
+        computer.on =true;
+    }else{
+        computer.on = false;
+        screen.scale.z= 0.1;
+    }
+}
+function startVideo(){
+    if (computer.on){
+        var mat = new THREE.MeshBasicMaterial( {map:vtexs[1]} );
+        screen.material = mat;
+        videos[1].play();
+    }
 }
 init();
 animate();
