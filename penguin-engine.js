@@ -14,7 +14,7 @@ var prevTime = performance.now();
 var velocity = new THREE.Vector3();
 var direction = new THREE.Vector3();
 var vertex = new THREE.Vector3();
-
+var crosshair;
 function init(){
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x000000 );
@@ -28,8 +28,8 @@ function init(){
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.gammaInput = true;
     renderer.gammaOutput = true;
-    var size = 20;
-    var divisions = 20;
+    var size = 100;
+    var divisions = 200;
     gridHelper = new THREE.GridHelper( size, divisions );
     scene.add( gridHelper );
     //CONTROLS
@@ -39,9 +39,10 @@ function init(){
         controls.lock();
     }, false );
     controls.addEventListener( 'lock', function () {
+        prevTime = performance.now();
     } );
     controls.addEventListener( 'unlock', function () {
-
+        
     } );
     scene.add(controls.getObject());
     var onKeyDown = function ( event ) {
@@ -146,6 +147,20 @@ function init(){
     scene.add( mirror );
     *///ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
     //scene.add( ambientLight );
+    //NESTOR DEBUGS, NESTOR FIXES
+    var spriteMap = new THREE.TextureLoader().load( "textures/uspotter.png" );
+    var spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff } );
+    crosshair = new THREE.Sprite( spriteMaterial );
+    crosshair.scale.set(0.02,0.02,1)
+    var crosshairPercentX = 50;
+    var crosshairPercentY = 50;
+    var crosshairPositionX = (crosshairPercentX / 100) * 2 - 1;
+    var crosshairPositionY = (crosshairPercentY / 100) * 2 - 1;
+
+    crosshair.position.x = crosshairPositionX * camera.aspect;
+    crosshair.position.y = crosshairPositionY;
+    crosshair.position.z = -0.3;
+    camera.add( crosshair );
     
     loader = new THREE.GLTFLoader();
     loadScene();
@@ -164,7 +179,6 @@ function init(){
    scene.add( group );
     window.addEventListener( 'resize', onWindowResize, false );
     window.addEventListener( "mousedown", onDocumentMouseClick, false );
-
 }
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -181,11 +195,9 @@ function animate() {
 }
 function move(){
     if ( controls.isLocked === true ) {
-        console.log(moveForward);
         var objects = [];
         raycaster.ray.origin.copy( controls.getObject().position );
-        raycaster.ray.origin.y -= 10;
-        var intersections = raycaster.intersectObjects( objects );
+         var intersections = raycaster.intersectObjects( objects );
         var onObject = intersections.length > 0;
         var time = performance.now();
         var delta = ( time - prevTime ) / 1000;
@@ -198,7 +210,8 @@ function move(){
         if ( moveForward || moveBackward ) velocity.z -= direction.z * 100.0 * delta;
         if ( moveLeft || moveRight ) velocity.x -= direction.x * 100.0 * delta;
         if ( onObject === true ) {
-            velocity.y = Math.max( 0, velocity.y );
+            velocity.z = Math.max(0,velocity.z);
+            velocity.x = Math.max(0,velocity.x);
             canJump = true;
         }
         controls.getObject().translateX( velocity.x * delta );
@@ -248,17 +261,19 @@ function loadVideoTextures(){
     }
 }
 //raycasting
+
 var INTERSECTED = null;
 var raycaster = new THREE.Raycaster();
 var mouseVector = new THREE.Vector3();
 function onDocumentMouseClick( event ) {
-	event.preventDefault();
-    var intersects = getIntersects(event.layerX, event.layerY );
+    event.preventDefault();    
+    var intersects = getIntersects( );
 		if ( intersects.length > 0 ) {
 				//if ( INTERSECTED ) INTERSECTED.material.color.setHex( 0xffffff  );//reset older intersected
                 INTERSECTED = intersects[ 0 ].object;
+                console.log(INTERSECTED);
 			    //INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
-                console.log(INTERSECTED)
+
                 //INTERSECTED.material.color.setHex( 0xffff00 );
                 if (INTERSECTED.name == "powerbutton"){
                     showDisplay();
@@ -266,14 +281,16 @@ function onDocumentMouseClick( event ) {
                 else if(INTERSECTED.name=="display"){
                     startVideo();
                 }
+                else if(INTERSECTED.name =="mouse" ){
+                    grab(INTERSECTED);
+                }
             }
 
 }
-function getIntersects( x, y ) {
-	x = ( x / window.innerWidth ) * 2 - 1;
-	y = - ( y / window.innerHeight ) * 2 + 1;
-	mouseVector.set( x, y, 0.5 );
-	raycaster.setFromCamera( mouseVector, camera );
+function getIntersects() {
+    var pos = THREE.Vector3();
+    var dir = THREE.Vector3();
+    raycaster.set(     camera.getWorldPosition(pos), camera.getWorldDirection(dir) );
 	return raycaster.intersectObjects( group.children,true);
 }
 function showDisplay(){
@@ -281,11 +298,12 @@ function showDisplay(){
         var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
         screen.material = mat;
         screen.scale.z = 1;
-        videos[0].play()
+        videos[0].play();
         computer.on =true;
     }else{
         computer.on = false;
-        screen.scale.z= 0.1;
+        videos[1].pause();
+        screen.scale.set(1,1,0.1);
     }
 }
 function startVideo(){
@@ -294,6 +312,9 @@ function startVideo(){
         screen.material = mat;
         videos[1].play();
     }
+}
+function grab(object){
+
 }
 init();
 animate();
