@@ -2,7 +2,7 @@
 var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,directionalLight,loader,Object,mirror;
 var screen;
 var group;
-var computer = {on:false}
+var tv = {on:false}
 var videos = [];
 var vtexs = [];
 //Controls
@@ -149,9 +149,9 @@ function init(){
     //scene.add( ambientLight );
     //NESTOR DEBUGS, NESTOR FIXES
     var spriteMap = new THREE.TextureLoader().load( "textures/uspotter.png" );
-    var spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff } );
+    var spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff ,opacity:0.5} );
     crosshair = new THREE.Sprite( spriteMaterial );
-    crosshair.scale.set(0.02,0.02,1)
+    crosshair.scale.set(0.01,0.01,1)
     var crosshairPercentX = 50;
     var crosshairPercentY = 50;
     var crosshairPositionX = (crosshairPercentX / 100) * 2 - 1;
@@ -223,11 +223,13 @@ function move(){
             canJump = true;
         }
         prevTime = time;
+        showHighlighted();
     }
 }
+
 function loadScene(){
     loader.load(
-        "http://127.0.0.1:8000/models/monitor-test.glb", //models/monitor-test.glb",
+        "http://127.0.0.1:8000/models/vhs-test.glb", //models/monitor-test.glb",
         function(gltf){
             //gltf.scene.name = objects[obj].name;
             gltf.scene.traverse( ( o ) => {
@@ -261,16 +263,16 @@ function loadVideoTextures(){
     }
 }
 //raycasting
-
+var HIGHLIGHTED = null;
 var INTERSECTED = null;
 var raycaster = new THREE.Raycaster();
-var mouseVector = new THREE.Vector3();
 function onDocumentMouseClick( event ) {
     event.preventDefault();    
     var intersects = getIntersects( );
 		if ( intersects.length > 0 ) {
 				//if ( INTERSECTED ) INTERSECTED.material.color.setHex( 0xffffff  );//reset older intersected
                 INTERSECTED = intersects[ 0 ].object;
+                
                 console.log(INTERSECTED);
 			    //INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
 
@@ -287,6 +289,25 @@ function onDocumentMouseClick( event ) {
             }
 
 }
+function showHighlighted(){
+    var intersects = getIntersects( );
+    if ( intersects.length > 0 ) {
+        if (intersects[0].object.name != "display"){
+            if (HIGHLIGHTED == null){
+                HIGHLIGHTED = intersects[0].object;
+                HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
+                HIGHLIGHTED.material.emissiveIntensity = 0.02;
+            }
+            if(HIGHLIGHTED != intersects[0].object){
+                HIGHLIGHTED.material.emissive = new THREE.Color( 0x000000 );
+                HIGHLIGHTED.material.emissiveIntensity = 1;
+                HIGHLIGHTED = intersects[0].object;
+                HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
+                HIGHLIGHTED.material.emissiveIntensity = 0.02;
+            }
+        }
+    }
+}
 function getIntersects() {
     var pos = THREE.Vector3();
     var dir = THREE.Vector3();
@@ -294,20 +315,22 @@ function getIntersects() {
 	return raycaster.intersectObjects( group.children,true);
 }
 function showDisplay(){
-    if (computer.on ==false){
+    if (tv.on ==false){
         var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
         screen.material = mat;
         screen.scale.z = 1;
         videos[0].play();
-        computer.on =true;
+        tv.on =true;
     }else{
-        computer.on = false;
+        tv.on = false;
+        videos[0].pause();
         videos[1].pause();
         screen.scale.set(1,1,0.1);
     }
 }
 function startVideo(){
-    if (computer.on){
+    if (tv.on){
+        videos[0].pause();
         var mat = new THREE.MeshBasicMaterial( {map:vtexs[1]} );
         screen.material = mat;
         videos[1].play();
