@@ -151,7 +151,7 @@ function init(){
     var spriteMap = new THREE.TextureLoader().load( "textures/uspotter.png" );
     var spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff ,opacity:0.5} );
     crosshair = new THREE.Sprite( spriteMaterial );
-    crosshair.scale.set(0.01,0.01,1)
+    crosshair.scale.set(0.005,0.005,1)
     var crosshairPercentX = 50;
     var crosshairPercentY = 50;
     var crosshairPositionX = (crosshairPercentX / 100) * 2 - 1;
@@ -224,12 +224,13 @@ function move(){
         }
         prevTime = time;
         showHighlighted();
+        animateDrop(delta);
     }
 }
 
 function loadScene(){
     loader.load(
-        "http://127.0.0.1:8000/models/vhs-test.glb", //models/monitor-test.glb",
+        "http://127.0.0.1/voidbcn3dviewer/models/vhs-test.glb", //models/monitor-test.glb",
         function(gltf){
             //gltf.scene.name = objects[obj].name;
             gltf.scene.traverse( ( o ) => {
@@ -264,9 +265,13 @@ function loadVideoTextures(){
 }
 //raycasting
 var HIGHLIGHTED = null;
+var GRABBED = null;
+var objVelocityY = 0;
+var objDroping = false;
 var INTERSECTED = null;
 var raycaster = new THREE.Raycaster();
 function onDocumentMouseClick( event ) {
+    console.log(event);
     event.preventDefault();    
     var intersects = getIntersects( );
 		if ( intersects.length > 0 ) {
@@ -283,10 +288,15 @@ function onDocumentMouseClick( event ) {
                 else if(INTERSECTED.name=="display"){
                     startVideo();
                 }
-                else if(INTERSECTED.name =="mouse" ){
-                    grab(INTERSECTED);
+                else if(INTERSECTED.name =="vhs_1" ){
+                    if (event.buttons == 1){
+                        grab(INTERSECTED);
+                    }
                 }
-            }
+        }
+        if (GRABBED != null && event.buttons != 1){
+            drop();
+        }
 
 }
 function showHighlighted(){
@@ -306,6 +316,11 @@ function showHighlighted(){
                 HIGHLIGHTED.material.emissiveIntensity = 0.02;
             }
         }
+    }
+    else if(HIGHLIGHTED != null){
+        HIGHLIGHTED.material.emissive = new THREE.Color( 0x000000 );
+        HIGHLIGHTED.material.emissiveIntensity = 1;
+        HIGHLIGHTED = null;
     }
 }
 function getIntersects() {
@@ -337,7 +352,43 @@ function startVideo(){
     }
 }
 function grab(object){
+    if(GRABBED == null){
+        GRABBED = object;
+        var objPercentX = 65;
+        var objPercentY = 25;
+        var objPositionX = (objPercentX / 100) * 2 - 1;
+        var objPositionY = (objPercentY / 100) * 2 - 1;
 
+        GRABBED.position.x = objPositionX * camera.aspect;
+        GRABBED.position.y = objPositionY;
+        GRABBED.position.z = -0.9;
+        GRABBED.rotateX(-90 * (Math.PI / 180));
+        camera.add( GRABBED );
+    }
+}
+function drop(){
+    camera.remove(GRABBED);
+    GRABBED.position.copy(camera.getWorldPosition());
+    GRABBED.rotateX(90 * (Math.PI / 180));
+    if (GRABBED.position.z < 0){
+        GRABBED.position.z += 1;
+    }else{
+        GRABBED.position.z -= 1;
+    }
+    group.add(GRABBED);
+    objDroping = true;
+}
+function animateDrop(delta){
+    if (objDroping){
+        objVelocityY -= 9.8 * 10.0 * delta;
+        GRABBED.position.y += ( objVelocityY * delta );
+        if ( GRABBED.position.y < 0.1 ) {
+            velocity.y = 0;
+            GRABBED.position.y = 0.1;
+            GRABBED = null
+            objDroping = false;
+        }
+    }
 }
 init();
 animate();
