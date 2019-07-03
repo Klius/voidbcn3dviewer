@@ -383,7 +383,7 @@ function animateDrop(delta){
         objVelocityY -= 9.8 * 10.0 * delta;
         GRABBED.position.y += ( objVelocityY * delta );
         if ( GRABBED.position.y < 0.1 ) {
-            velocity.y = 0;
+            objVelocityY = 0;
             GRABBED.position.y = 0.1;
             GRABBED = null
             objDroping = false;
