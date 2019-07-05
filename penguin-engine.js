@@ -230,7 +230,7 @@ function move(){
 
 function loadScene(){
     loader.load(
-        "http://127.0.0.1/voidbcn3dviewer/models/vhs-test.glb", //models/monitor-test.glb",
+        "models/vhs-test.glb", //models/monitor-test.glb",
         function(gltf){
             //gltf.scene.name = objects[obj].name;
             gltf.scene.traverse( ( o ) => {
@@ -369,12 +369,11 @@ function grab(object){
 function drop(){
     camera.remove(GRABBED);
     GRABBED.position.copy(camera.getWorldPosition());
+    GRABBED.position.x += camera.getWorldDirection().x;
+    GRABBED.position.y += camera.getWorldDirection().y;
+    GRABBED.position.z += camera.getWorldDirection().z;
     GRABBED.rotateX(90 * (Math.PI / 180));
-    if (GRABBED.position.z < 0){
-        GRABBED.position.z += 1;
-    }else{
-        GRABBED.position.z -= 1;
-    }
+
     group.add(GRABBED);
     objDroping = true;
 }
