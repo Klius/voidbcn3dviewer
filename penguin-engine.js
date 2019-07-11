@@ -230,7 +230,7 @@ function move(){
 
 function loadScene(){
     loader.load(
-        "models/vhs-test.glb", //models/monitor-test.glb",
+        "models/vhs-test-01.glb", //models/monitor-test.glb",
         function(gltf){
             //gltf.scene.name = objects[obj].name;
             gltf.scene.traverse( ( o ) => {
@@ -279,18 +279,21 @@ function onDocumentMouseClick( event ) {
                 INTERSECTED = intersects[ 0 ].object;
                 
                 console.log(INTERSECTED);
-			    //INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
-
-                //INTERSECTED.material.color.setHex( 0xffff00 );
-                if (INTERSECTED.name == "powerbutton"){
-                    showDisplay();
-                }
-                else if(INTERSECTED.name=="display"){
-                    startVideo();
-                }
-                else if(INTERSECTED.name =="vhs_1" ){
-                    if (event.buttons == 1){
-                        grab(INTERSECTED);
+                var proximity = camera.getWorldPosition().distanceTo(INTERSECTED.position);
+                console.log(proximity);
+                //INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+                if(proximity < 3){
+                    //INTERSECTED.material.color.setHex( 0xffff00 );
+                    if (INTERSECTED.name == "powerbutton"){
+                        showDisplay();
+                    }
+                    else if(INTERSECTED.name=="display"){
+                        startVideo();
+                    }
+                    else if(INTERSECTED.name =="vhs_1" ){
+                        if (event.buttons == 1){
+                            grab(INTERSECTED);
+                        }
                     }
                 }
         }
@@ -302,18 +305,21 @@ function onDocumentMouseClick( event ) {
 function showHighlighted(){
     var intersects = getIntersects( );
     if ( intersects.length > 0 ) {
-        if (intersects[0].object.name != "display"){
-            if (HIGHLIGHTED == null){
-                HIGHLIGHTED = intersects[0].object;
-                HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
-                HIGHLIGHTED.material.emissiveIntensity = 0.02;
-            }
-            if(HIGHLIGHTED != intersects[0].object){
-                HIGHLIGHTED.material.emissive = new THREE.Color( 0x000000 );
-                HIGHLIGHTED.material.emissiveIntensity = 1;
-                HIGHLIGHTED = intersects[0].object;
-                HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
-                HIGHLIGHTED.material.emissiveIntensity = 0.02;
+        var proximity = camera.getWorldPosition().distanceTo(intersects[0].object.position);
+        if (proximity < 3){
+            if (intersects[0].object.name != "display"){
+                if (HIGHLIGHTED == null){
+                    HIGHLIGHTED = intersects[0].object;
+                    HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
+                    HIGHLIGHTED.material.emissiveIntensity = 0.02;
+                }
+                if(HIGHLIGHTED != intersects[0].object){
+                    HIGHLIGHTED.material.emissive = new THREE.Color( 0x000000 );
+                    HIGHLIGHTED.material.emissiveIntensity = 1;
+                    HIGHLIGHTED = intersects[0].object;
+                    HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
+                    HIGHLIGHTED.material.emissiveIntensity = 0.02;
+                }
             }
         }
     }
@@ -354,8 +360,8 @@ function startVideo(){
 function grab(object){
     if(GRABBED == null){
         GRABBED = object;
-        var objPercentX = 65;
-        var objPercentY = 25;
+        var objPercentX = 100;
+        var objPercentY = 35;
         var objPositionX = (objPercentX / 100) * 2 - 1;
         var objPositionY = (objPercentY / 100) * 2 - 1;
 
@@ -368,12 +374,13 @@ function grab(object){
 }
 function drop(){
     camera.remove(GRABBED);
-    GRABBED.position.copy(camera.getWorldPosition());
+    GRABBED.rotateX(90 * (Math.PI / 180));
+
+    GRABBED.position.set(camera.getWorldPosition().x,camera.getWorldPosition().y,camera.getWorldPosition().z);// + camera.getWorldDirection().x)/2;
     GRABBED.position.x += camera.getWorldDirection().x;
     GRABBED.position.y += camera.getWorldDirection().y;
     GRABBED.position.z += camera.getWorldDirection().z;
-    GRABBED.rotateX(90 * (Math.PI / 180));
-
+    
     group.add(GRABBED);
     objDroping = true;
 }
@@ -388,6 +395,11 @@ function animateDrop(delta){
             objDroping = false;
         }
     }
+}
+function uniformScale(obj,inc){
+    obj.scale.x += inc;
+    obj.scale.y += inc;
+    //obj.scale.z += inc;
 }
 init();
 animate();
