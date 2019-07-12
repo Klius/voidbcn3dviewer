@@ -3,7 +3,7 @@ var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,direc
 var screen;
 var group;
 var tv = {on:false}
-var vhsPlayer = {hasVHS:false,playing:false,ejecting:false,stopped:false,rewind:false,forward:false};
+var vhsPlayer = {hasVHS:false,vhs:"none",playing:false,ejecting:false,stopped:false,rewind:false,forward:false};
 var videos = [];
 var vtexs = [];
 //Controls
@@ -287,15 +287,15 @@ function onDocumentMouseClick( event ) {
                     if (INTERSECTED.name == "powerbutton"){
                         showDisplay();
                     }
-                    else if(INTERSECTED.name=="display"){
+                    else if(INTERSECTED.name=="playbutton"){
                         startVideo();
                     }
-                    else if(INTERSECTED.name =="vhs_1" ){
+                    else if(INTERSECTED.name =="video-ashes" ){
                         if (event.buttons == 1){
                             grab(INTERSECTED);
                         }
                     }
-                    else if(INTERSECTED.name =="vhs_enter"){
+                    else if((INTERSECTED.name =="vhs_enter") &&(event.buttons == 1)){
                         enterVHS(INTERSECTED);
                     }
         }
@@ -334,29 +334,56 @@ function getIntersects() {
     raycaster.set(     camera.getWorldPosition(pos), camera.getWorldDirection(dir) );
 	return raycaster.intersectObjects( group.children,true);
 }
+function getVideoFromId(id){
+    var videoId = 0;
+    for(i=0;i<videos.length;i++){
+        if (videos[i].id == id)
+        {
+            videoId = i;
+            break;
+        }
+    }
+    return videoId
+}
 /***************************
  * ACTIONS
  ***************************/
 function showDisplay(){
     if (tv.on ==false){
-        var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
-        screen.material = mat;
-        screen.scale.z = 1;
-        videos[0].play();
+        if (vhsPlayer.hasVHS && vhsPlayer.playing){
+            var vid = getVideoFromId(vhsPlayer.vhs);
+            videos[vid].volume = 1;
+        }
+        else{
+            var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
+            screen.material = mat;
+            screen.scale.z = 1;
+            videos[0].play();
+        }
         tv.on =true;
+        screen.scale.set(1,1,1);
     }else{
         tv.on = false;
-        videos[0].pause();
-        videos[1].pause();
+        if (vhsPlayer.hasVHS && vhsPlayer.playing){
+            var vid = getVideoFromId(vhsPlayer.vhs);
+            videos[vid].volume = 0;
+        }
+        else{
+            videos[0].pause();
+        
+        }
         screen.scale.set(1,1,0.1);
     }
 }
 function startVideo(){
-    if (tv.on){
+    if (vhsPlayer.hasVHS){
         videos[0].pause();
-        var mat = new THREE.MeshBasicMaterial( {map:vtexs[1]} );
+        var vid = getVideoFromId(vhsPlayer.vhs);
+        var mat = new THREE.MeshBasicMaterial( {map:vtexs[vid]} );
         screen.material = mat;
-        videos[1].play();
+        videos[vid].volume = 1;
+        videos[vid].play();
+        vhsPlayer.playing = true;
     }
 }
 function enterVHS(INTERSECTED){
@@ -364,14 +391,17 @@ function enterVHS(INTERSECTED){
         vhsPlayer.hasVHS = true;
         vhsPlayer.vhs = GRABBED.name ;
         camera.remove(GRABBED);
-        GRABBED.rotateX(90 * (Math.PI / 180));
         GRABBED.position.copy(INTERSECTED.position);
         INTERSECTED.scale.x = 0.0001;
         INTERSECTED.scale.y = 0.0001;
         INTERSECTED.scale.z = 0.0001;
         GRABBED.material.opacity = 1;
         GRABBED.material.transparent = false;
+        GRABBED.rotateX(90 * (Math.PI / 180));
         group.add(GRABBED);
+        vhsPlayer.hasVHS = true
+        vhsPlayer.vhs =GRABBED.name;
+        GRABBED = null;
     }
 }
 function grab(object){
