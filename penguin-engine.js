@@ -3,6 +3,7 @@ var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,direc
 var screen;
 var group;
 var tv = {on:false}
+var vhsPlayer = {hasVHS:false,playing:false,ejecting:false,stopped:false,rewind:false,forward:false};
 var videos = [];
 var vtexs = [];
 //Controls
@@ -270,6 +271,8 @@ var objVelocityY = 0;
 var objDroping = false;
 var INTERSECTED = null;
 var raycaster = new THREE.Raycaster();
+raycaster.near = 0;
+raycaster.far = 4.0;
 function onDocumentMouseClick( event ) {
     console.log(event);
     event.preventDefault();    
@@ -279,10 +282,7 @@ function onDocumentMouseClick( event ) {
                 INTERSECTED = intersects[ 0 ].object;
                 
                 console.log(INTERSECTED);
-                var proximity = camera.getWorldPosition().distanceTo(INTERSECTED.position);
-                console.log(proximity);
                 //INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
-                if(proximity < 3){
                     //INTERSECTED.material.color.setHex( 0xffff00 );
                     if (INTERSECTED.name == "powerbutton"){
                         showDisplay();
@@ -295,7 +295,9 @@ function onDocumentMouseClick( event ) {
                             grab(INTERSECTED);
                         }
                     }
-                }
+                    else if(INTERSECTED.name =="vhs_enter"){
+                        enterVHS(INTERSECTED);
+                    }
         }
         if (GRABBED != null && event.buttons != 1){
             drop();
@@ -305,8 +307,6 @@ function onDocumentMouseClick( event ) {
 function showHighlighted(){
     var intersects = getIntersects( );
     if ( intersects.length > 0 ) {
-        var proximity = camera.getWorldPosition().distanceTo(intersects[0].object.position);
-        if (proximity < 3){
             if (intersects[0].object.name != "display"){
                 if (HIGHLIGHTED == null){
                     HIGHLIGHTED = intersects[0].object;
@@ -321,7 +321,6 @@ function showHighlighted(){
                     HIGHLIGHTED.material.emissiveIntensity = 0.02;
                 }
             }
-        }
     }
     else if(HIGHLIGHTED != null){
         HIGHLIGHTED.material.emissive = new THREE.Color( 0x000000 );
@@ -335,6 +334,9 @@ function getIntersects() {
     raycaster.set(     camera.getWorldPosition(pos), camera.getWorldDirection(dir) );
 	return raycaster.intersectObjects( group.children,true);
 }
+/***************************
+ * ACTIONS
+ ***************************/
 function showDisplay(){
     if (tv.on ==false){
         var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
@@ -357,10 +359,25 @@ function startVideo(){
         videos[1].play();
     }
 }
+function enterVHS(INTERSECTED){
+    if ((GRABBED != null)&& (vhsPlayer.hasVHS ==false )){
+        vhsPlayer.hasVHS = true;
+        vhsPlayer.vhs = GRABBED.name ;
+        camera.remove(GRABBED);
+        GRABBED.rotateX(90 * (Math.PI / 180));
+        GRABBED.position.copy(INTERSECTED.position);
+        INTERSECTED.scale.x = 0.0001;
+        INTERSECTED.scale.y = 0.0001;
+        INTERSECTED.scale.z = 0.0001;
+        GRABBED.material.opacity = 1;
+        GRABBED.material.transparent = false;
+        group.add(GRABBED);
+    }
+}
 function grab(object){
     if(GRABBED == null){
         GRABBED = object;
-        var objPercentX = 100;
+        var objPercentX = 70;
         var objPercentY = 35;
         var objPositionX = (objPercentX / 100) * 2 - 1;
         var objPositionY = (objPercentY / 100) * 2 - 1;
@@ -369,6 +386,8 @@ function grab(object){
         GRABBED.position.y = objPositionY;
         GRABBED.position.z = -0.9;
         GRABBED.rotateX(-90 * (Math.PI / 180));
+        GRABBED.material.opacity = 0.9;
+        GRABBED.material.transparent = true;
         camera.add( GRABBED );
     }
 }
@@ -380,7 +399,8 @@ function drop(){
     GRABBED.position.x += camera.getWorldDirection().x;
     GRABBED.position.y += camera.getWorldDirection().y;
     GRABBED.position.z += camera.getWorldDirection().z;
-    
+    GRABBED.material.opacity = 1;
+    GRABBED.material.transparent = false;
     group.add(GRABBED);
     objDroping = true;
 }
