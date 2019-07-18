@@ -16,6 +16,8 @@ var velocity = new THREE.Vector3();
 var direction = new THREE.Vector3();
 var vertex = new THREE.Vector3();
 var crosshair;
+//MESHES
+var meshEnterVHS;
 function init(){
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x000000 );
@@ -238,8 +240,11 @@ function loadScene(){
                 if( o.isMesh){
                     console.log("adding shadows");
                     o.castShadow = true;
-                    o.receiveShadow = false;
+                    o.receiveShadow = true;
                     o.material.fog = false;
+                    if( o.name == "enter_vhs"){
+                        meshEnterVHS = o;
+                    }
                 }
             });
             object = gltf.scene
@@ -290,13 +295,16 @@ function onDocumentMouseClick( event ) {
                     else if(INTERSECTED.name=="playbutton"){
                         startVideo();
                     }
+                    else if(INTERSECTED.name=="stopbutton"){
+                        stopVideo();
+                    }
                     else if(INTERSECTED.name =="video-ashes" ){
                         if (event.buttons == 1){
                             grab(INTERSECTED);
                         }
                     }
                     else if((INTERSECTED.name =="vhs_enter") &&(event.buttons == 1)){
-                        enterVHS(INTERSECTED);
+                        enterVHS();
                     }
         }
         if (GRABBED != null && event.buttons != 1){
@@ -351,7 +359,7 @@ function getVideoFromId(id){
 function showDisplay(){
     if (tv.on ==false){
         if (vhsPlayer.hasVHS && vhsPlayer.playing){
-            var vid = getVideoFromId(vhsPlayer.vhs);
+            var vid = getVideoFromId(vhsPlayer.vhs.name);
             videos[vid].volume = 1;
         }
         else{
@@ -365,7 +373,7 @@ function showDisplay(){
     }else{
         tv.on = false;
         if (vhsPlayer.hasVHS && vhsPlayer.playing){
-            var vid = getVideoFromId(vhsPlayer.vhs);
+            var vid = getVideoFromId(vhsPlayer.vhs.name);
             videos[vid].volume = 0;
         }
         else{
@@ -378,7 +386,7 @@ function showDisplay(){
 function startVideo(){
     if (vhsPlayer.hasVHS){
         videos[0].pause();
-        var vid = getVideoFromId(vhsPlayer.vhs);
+        var vid = getVideoFromId(vhsPlayer.vhs.name);
         var mat = new THREE.MeshBasicMaterial( {map:vtexs[vid]} );
         screen.material = mat;
         videos[vid].volume = 1;
@@ -386,22 +394,52 @@ function startVideo(){
         vhsPlayer.playing = true;
     }
 }
-function enterVHS(INTERSECTED){
+function stopVideo(){
+    if (vhsPlayer.hasVHS && vhsPlayer.playing){
+        var vid = getVideoFromId(vhsPlayer.vhs.name);
+        videos[vid].pause();
+        videos[vid].volume = 0;
+        var mat = new THREE.MeshBasicMaterial({map:vtexs[0]});
+        screen.material = mat;
+        videos[0].volume = 1;
+        videos[0].play();
+        vhsPlayer.playing = false;
+        vhsPlayer.stopped = true;
+    }
+}
+function enterVHS(){
     if ((GRABBED != null)&& (vhsPlayer.hasVHS ==false )){
         vhsPlayer.hasVHS = true;
-        vhsPlayer.vhs = GRABBED.name ;
+        vhsPlayer.vhs = GRABBED ;
         camera.remove(GRABBED);
-        GRABBED.position.copy(INTERSECTED.position);
-        INTERSECTED.scale.x = 0.0001;
-        INTERSECTED.scale.y = 0.0001;
-        INTERSECTED.scale.z = 0.0001;
+        GRABBED.position.copy(meshEnterVHS.position);
+        meshEnterVHS.scale.x = 0.0001;
+        meshEnterVHS.scale.y = 0.0001;
+        meshEnterVHS.scale.z = 0.0001;
         GRABBED.material.opacity = 1;
         GRABBED.material.transparent = false;
         GRABBED.rotateX(90 * (Math.PI / 180));
         group.add(GRABBED);
-        vhsPlayer.hasVHS = true
-        vhsPlayer.vhs =GRABBED.name;
         GRABBED = null;
+    }
+}
+function ejectVHS(){
+    if(vhsPlayer.hasVHS ){
+        var vid = getVideoFromId(vhsPlayer.vhs.name);
+        if (vhsPlayer.playing){
+            videos[vid].pause();
+        }
+        vhsPlayer.stopped = false;
+        vhsPlayer.playing = false;
+        vhsPlayer.rewind  = false;
+        vhsPlayer.forward = false;
+        vhsPlayer.vhs.position.z = 1;
+        vhsPlayer.vhs = null;
+        vhsPlayer.hasVHS = false;
+
+        var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
+        screen.material = mat;
+
     }
 }
 function grab(object){
