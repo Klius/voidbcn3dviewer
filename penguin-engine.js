@@ -18,6 +18,7 @@ var vertex = new THREE.Vector3();
 var crosshair;
 //MESHES
 var meshEnterVHS;
+var droppingObjects = [];
 function init(){
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x000000 );
@@ -242,13 +243,12 @@ function loadScene(){
                     o.castShadow = true;
                     o.receiveShadow = true;
                     o.material.fog = false;
-                    if( o.name == "enter_vhs"){
-                        meshEnterVHS = o;
-                    }
                 }
             });
             object = gltf.scene
             group.add(object);
+            meshEnterVHS = object.getObjectByName("vhs_enter");
+
         },
         function ( xhr ) {
             console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
@@ -305,6 +305,9 @@ function onDocumentMouseClick( event ) {
                     }
                     else if((INTERSECTED.name =="vhs_enter") &&(event.buttons == 1)){
                         enterVHS();
+                    }
+                    else if(INTERSECTED.name =="ejectbutton"){
+                        ejectVHS();
                     }
         }
         if (GRABBED != null && event.buttons != 1){
@@ -389,7 +392,11 @@ function startVideo(){
         var vid = getVideoFromId(vhsPlayer.vhs.name);
         var mat = new THREE.MeshBasicMaterial( {map:vtexs[vid]} );
         screen.material = mat;
-        videos[vid].volume = 1;
+        if(tv.on){
+            videos[vid].volume = 1;
+        }else{
+            videos[vid].volume = 0;
+        }
         videos[vid].play();
         vhsPlayer.playing = true;
     }
@@ -413,13 +420,11 @@ function enterVHS(){
         vhsPlayer.vhs = GRABBED ;
         camera.remove(GRABBED);
         GRABBED.position.copy(meshEnterVHS.position);
-        meshEnterVHS.scale.x = 0.0001;
-        meshEnterVHS.scale.y = 0.0001;
-        meshEnterVHS.scale.z = 0.0001;
+        group.remove(meshEnterVHS);
         GRABBED.material.opacity = 1;
         GRABBED.material.transparent = false;
         GRABBED.rotateX(90 * (Math.PI / 180));
-        group.add(GRABBED);
+        scene.add(GRABBED);
         GRABBED = null;
     }
 }
@@ -433,17 +438,25 @@ function ejectVHS(){
         vhsPlayer.playing = false;
         vhsPlayer.rewind  = false;
         vhsPlayer.forward = false;
-        vhsPlayer.vhs.position.z = 1;
+        vhsPlayer.vhs.position.z = -1.4;
+        group.add(vhsPlayer.vhs)
+        droppingObjects.push(vhsPlayer.vhs);
         vhsPlayer.vhs = null;
-        vhsPlayer.hasVHS = false;
+        vhsPlayer.hasVHS = false;        
 
         var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
         screen.material = mat;
+        if ( tv.on ){
+            videos[0].play();
+            videos[0].volume = 1;
+        }
+
 
     }
 }
 function grab(object){
-    if(GRABBED == null){
+    if((GRABBED == null)){
+        //removeFromDropping(object);
         GRABBED = object;
         var objPercentX = 70;
         var objPercentY = 35;
@@ -457,6 +470,8 @@ function grab(object){
         GRABBED.material.opacity = 0.9;
         GRABBED.material.transparent = true;
         camera.add( GRABBED );
+        //Add overlay to enter vhs
+        group.add(meshEnterVHS);
     }
 }
 function drop(){
@@ -471,16 +486,29 @@ function drop(){
     GRABBED.material.transparent = false;
     group.add(GRABBED);
     objDroping = true;
+    droppingObjects.push(GRABBED);
+    GRABBED = null;
 }
 function animateDrop(delta){
-    if (objDroping){
+    if (droppingObjects.length > 0){
         objVelocityY -= 9.8 * 10.0 * delta;
-        GRABBED.position.y += ( objVelocityY * delta );
-        if ( GRABBED.position.y < 0.1 ) {
-            objVelocityY = 0;
-            GRABBED.position.y = 0.1;
-            GRABBED = null
-            objDroping = false;
+        for (i=0;i<droppingObjects.length;i++){
+            droppingObjects[i].position.y += ( objVelocityY * delta );
+            if ( droppingObjects[i].position.y < 0.1 ) {
+                //objVelocityY = 0;
+                droppingObjects[i].position.y = 0.1;
+                droppingObjects.splice(i,1);
+            }
+        }
+    }
+    else{
+        objVelocityY = 0;
+    }
+}
+function removeFromDropping(obj){
+    for (i=0;i<droppingObjects.length;i++){
+        if (obj === droppingObjects[i]){
+            droppingObjects.splice(i,1);
         }
     }
 }
