@@ -488,6 +488,7 @@ function drop(){
     objDroping = true;
     droppingObjects.push(GRABBED);
     GRABBED = null;
+    group.remove(meshEnterVHS);
 }
 function animateDrop(delta){
     if (droppingObjects.length > 0){
