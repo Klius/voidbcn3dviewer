@@ -20,8 +20,17 @@ var crosshair;
 var meshEnterVHS;
 var droppingObjects = [];
 function init(){
+    var cubeloader = new THREE.CubeTextureLoader();
+    var backTexture = new cubeloader.load([
+        'textures/cubemap-test1.png',
+        'textures/cubemap-test2.png',
+        'textures/cubemap-test3.png',
+        'textures/cubemap-test4.png',
+        'textures/cubemap-test5.png',
+        'textures/cubemap-test6.png'
+    ]);
     scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0x000000 );
+    scene.background = backTexture;// new THREE.Color( 0x000000 );
     scene.fog = new THREE.FogExp2( 0x000000, 0.0055)//0.0050 );
     camera = new THREE.PerspectiveCamera(75,window.innerWidth/ window.innerHeight,0.1,1000);
     camera.position.set(-0.057766778068525766,0.845400243664275,-5.389125287906793 );// Set position like this
@@ -68,7 +77,7 @@ function init(){
                 moveRight = true;
                 break;
             case 32: // space
-                if ( canJump === true ) velocity.y += 350;
+                if ( canJump === true ) velocity.y += 200;
                 canJump = false;
                 break;
         }
@@ -105,10 +114,10 @@ function init(){
     //VIDEOTEXTURE
     loadVideoTextures()
     /*LIGHTS*/
-    ambientLight = new THREE.AmbientLight( 0x404040, 0.5 );
+    ambientLight = new THREE.AmbientLight( 0x404040, 1 );
     scene.add( ambientLight );
     
-    light = new THREE.PointLight( 0xffffff, 1, 100 );
+    light = new THREE.PointLight( 0xffffff, 1, 5 );
     light.position.set( 10, 50, 0 );
     scene.add( light );
     scene.castShadow = true;
@@ -131,7 +140,7 @@ function init(){
     /*
     Directional Light
     */
-    directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+    directionalLight = new THREE.DirectionalLight( 0xffffff, 0.1 );
     directionalLight.position = camera.position;
     directionalLight.castShadow = true;
     scene.add(directionalLight);
@@ -152,8 +161,8 @@ function init(){
     *///ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
     //scene.add( ambientLight );
     //NESTOR DEBUGS, NESTOR FIXES
-    var spriteMap = new THREE.TextureLoader().load( "textures/uspotter.png" );
-    var spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff ,opacity:0.5} );
+    var spriteMap = new THREE.TextureLoader().load( "textures/uspotter-white.png" );
+    var spriteMaterial = new THREE.SpriteMaterial( { map: spriteMap, color: 0xffffff ,opacity:0.8} );
     crosshair = new THREE.Sprite( spriteMaterial );
     crosshair.scale.set(0.005,0.005,1)
     var crosshairPercentX = 50;
@@ -196,6 +205,7 @@ function animate() {
     move();
     directionalLight.position.copy( camera.position );
     renderer.render( scene, camera );
+    document.getElementById("DEBUG").innerHTML = "<b>X:</b>"+camera.position.x+" <b>Y:</b>"+camera.position.y+" <b>Z:</b>"+camera.position.z;
 }
 function move(){
     if ( controls.isLocked === true ) {
@@ -211,8 +221,8 @@ function move(){
         direction.z = Number( moveForward ) - Number( moveBackward );
         direction.x = Number( moveLeft ) - Number( moveRight );
         direction.normalize(); // this ensures consistent movements in all directions
-        if ( moveForward || moveBackward ) velocity.z -= direction.z * 100.0 * delta;
-        if ( moveLeft || moveRight ) velocity.x -= direction.x * 100.0 * delta;
+        if ( moveForward || moveBackward ) velocity.z -= direction.z * 75.0 * delta;
+        if ( moveLeft || moveRight ) velocity.x -= direction.x * 75.0 * delta;
         if ( onObject === true ) {
             velocity.z = Math.max(0,velocity.z);
             velocity.x = Math.max(0,velocity.x);
@@ -240,15 +250,22 @@ function loadScene(){
             gltf.scene.traverse( ( o ) => {
                 if( o.isMesh){
                     console.log("adding shadows");
-                    o.castShadow = true;
-                    o.receiveShadow = true;
+                    o.castShadow =false;
+                    o.receiveShadow = false;
                     o.material.fog = false;
                 }
             });
             object = gltf.scene
-            group.add(object);
+            scene.add(object);
             meshEnterVHS = object.getObjectByName("vhs_enter");
-
+            group.add(meshEnterVHS);
+            group.add(object.getObjectByName("playbutton"));
+            group.add(object.getObjectByName("powerbutton"));
+            group.add(object.getObjectByName("ejectbutton"));
+            group.add(object.getObjectByName("forwardbutton"));
+            group.add(object.getObjectByName("rewindbutton"));
+            group.add(object.getObjectByName("stopbutton"));
+            group.add(object.getObjectByName("video-ashes"));
         },
         function ( xhr ) {
             console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
@@ -268,6 +285,7 @@ function loadVideoTextures(){
         videos.push(video);
         vtexs.push(vtex);
     }
+    videos[0].volume=0.5;
 }
 //raycasting
 var HIGHLIGHTED = null;
@@ -365,7 +383,7 @@ function showDisplay(){
             var vid = getVideoFromId(vhsPlayer.vhs.name);
             videos[vid].volume = 1;
         }
-        else{
+        else{//NOISE
             var mat = new THREE.MeshBasicMaterial( {map:vtexs[0]} );
             screen.material = mat;
             screen.scale.z = 1;
@@ -414,6 +432,7 @@ function stopVideo(){
         vhsPlayer.stopped = true;
     }
 }
+// FORWARD video.currentTime+5
 function enterVHS(){
     if ((GRABBED != null)&& (vhsPlayer.hasVHS ==false )){
         vhsPlayer.hasVHS = true;
@@ -448,7 +467,7 @@ function ejectVHS(){
         screen.material = mat;
         if ( tv.on ){
             videos[0].play();
-            videos[0].volume = 1;
+            videos[0].volume = 0.5;
         }
 
 
