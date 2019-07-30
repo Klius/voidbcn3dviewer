@@ -1,3 +1,7 @@
+//DEBUG
+var stats = new Stats();
+stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild( stats.dom );
 //Basic Variable Declaration
 var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,directionalLight,loader,Object,mirror;
 var screen;
@@ -20,7 +24,7 @@ var crosshair;
 var meshEnterVHS;
 var droppingObjects = [];
 function init(){
-    var cubeloader = new THREE.CubeTextureLoader();
+    /*var cubeloader = new THREE.CubeTextureLoader();
     var backTexture = new cubeloader.load([
         'textures/cubemap-test1.png',
         'textures/cubemap-test2.png',
@@ -28,9 +32,9 @@ function init(){
         'textures/cubemap-test4.png',
         'textures/cubemap-test5.png',
         'textures/cubemap-test6.png'
-    ]);
+    ]);*/
     scene = new THREE.Scene();
-    scene.background = backTexture;// new THREE.Color( 0x000000 );
+    scene.background = new THREE.Color( 0x000000 );//backTexture;// 
     scene.fog = new THREE.FogExp2( 0x000000, 0.0055)//0.0050 );
     camera = new THREE.PerspectiveCamera(75,window.innerWidth/ window.innerHeight,0.1,1000);
     camera.position.set(-0.057766778068525766,0.845400243664275,-5.389125287906793 );// Set position like this
@@ -200,11 +204,13 @@ function onWindowResize() {
     renderer.setSize( window.innerWidth, window.innerHeight );
 }
 function animate() {
+    stats.begin()
     requestAnimationFrame( animate );
     //animation stuff goes here
     move();
     directionalLight.position.copy( camera.position );
     renderer.render( scene, camera );
+    stats.end()
     document.getElementById("DEBUG").innerHTML = "<b>X:</b>"+camera.position.x+" <b>Y:</b>"+camera.position.y+" <b>Z:</b>"+camera.position.z;
 }
 function move(){
@@ -221,8 +227,8 @@ function move(){
         direction.z = Number( moveForward ) - Number( moveBackward );
         direction.x = Number( moveLeft ) - Number( moveRight );
         direction.normalize(); // this ensures consistent movements in all directions
-        if ( moveForward || moveBackward ) velocity.z -= direction.z * 75.0 * delta;
-        if ( moveLeft || moveRight ) velocity.x -= direction.x * 75.0 * delta;
+        if ( moveForward || moveBackward ) velocity.z -= direction.z * 100.0 * delta;
+        if ( moveLeft || moveRight ) velocity.x -= direction.x * 100.0 * delta;
         if ( onObject === true ) {
             velocity.z = Math.max(0,velocity.z);
             velocity.x = Math.max(0,velocity.x);
