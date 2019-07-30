@@ -1,7 +1,7 @@
 //DEBUG
-var stats = new Stats();
-stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-document.body.appendChild( stats.dom );
+var fps = new Stats();
+fps.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild( fps.dom );
 //Basic Variable Declaration
 var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,directionalLight,loader,Object,mirror;
 var screen;
@@ -204,13 +204,13 @@ function onWindowResize() {
     renderer.setSize( window.innerWidth, window.innerHeight );
 }
 function animate() {
-    stats.begin()
+    fps.begin()
     requestAnimationFrame( animate );
     //animation stuff goes here
     move();
     directionalLight.position.copy( camera.position );
     renderer.render( scene, camera );
-    stats.end()
+    fps.end()
     document.getElementById("DEBUG").innerHTML = "<b>X:</b>"+camera.position.x+" <b>Y:</b>"+camera.position.y+" <b>Z:</b>"+camera.position.z;
 }
 function move(){
@@ -258,7 +258,7 @@ function loadScene(){
                     console.log("adding shadows");
                     o.castShadow =false;
                     o.receiveShadow = false;
-                    o.material.fog = false;
+                    o.material.fog = true;
                 }
             });
             object = gltf.scene
