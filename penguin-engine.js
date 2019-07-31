@@ -23,6 +23,7 @@ var crosshair;
 //MESHES
 var meshEnterVHS;
 var droppingObjects = [];
+var backcube;
 function init(){
     /*var cubeloader = new THREE.CubeTextureLoader();
     var backTexture = new cubeloader.load([
@@ -122,7 +123,7 @@ function init(){
     scene.add( ambientLight );
     
     light = new THREE.PointLight( 0xffffff, 1, 5 );
-    light.position.set( 10, 50, 0 );
+    light.position.set( 0, 2, -2 );
     scene.add( light );
     scene.castShadow = true;
     /*
@@ -138,16 +139,16 @@ function init(){
     light.shadow.mapSize.height = 512;
     light.shadow = new THREE.LightShadow(new THREE.PerspectiveCamera(60, 1, 1, 2500));//without this there are no shadows\\*0 /
     scene.add( light );
-    lightHelper = new THREE.PointLightHelper( light );
-    scene.add( lightHelper );
+    /*lightHelper = new THREE.PointLightHelper( light );
+    scene.add( lightHelper );*/
 
     /*
     Directional Light
-    */
+    
     directionalLight = new THREE.DirectionalLight( 0xffffff, 0.1 );
     directionalLight.position = camera.position;
     directionalLight.castShadow = true;
-    scene.add(directionalLight);
+    scene.add(directionalLight);*/
     /*
         MIRROR
     */
@@ -190,9 +191,9 @@ function init(){
    screen.position.set(0, 1.4, -0.3);
    screen.scale.z=0.1
    screen.name="display";
+   scene.add(screen);
    //group
    group = new THREE.Group();
-   group.add(screen);
    scene.add( group );
     window.addEventListener( 'resize', onWindowResize, false );
     window.addEventListener( "mousedown", onDocumentMouseClick, false );
@@ -204,14 +205,17 @@ function onWindowResize() {
     renderer.setSize( window.innerWidth, window.innerHeight );
 }
 function animate() {
-    fps.begin()
-    requestAnimationFrame( animate );
+    fps.begin() 
+   // setTimeout( function() {
+        requestAnimationFrame( animate );
+
+    //}, 1000 / 30 );
     //animation stuff goes here
     move();
-    directionalLight.position.copy( camera.position );
+    //directionalLight.position.copy( camera.position );
     renderer.render( scene, camera );
     fps.end()
-    document.getElementById("DEBUG").innerHTML = "<b>X:</b>"+camera.position.x+" <b>Y:</b>"+camera.position.y+" <b>Z:</b>"+camera.position.z;
+    //document.getElementById("DEBUG").innerHTML = "<b>X:</b>"+camera.position.x+" <b>Y:</b>"+camera.position.y+" <b>Z:</b>"+camera.position.z;
 }
 function move(){
     if ( controls.isLocked === true ) {
@@ -245,6 +249,7 @@ function move(){
         prevTime = time;
         showHighlighted();
         animateDrop(delta);
+        backcube.rotation.y+=0.5*delta;
     }
 }
 
@@ -263,6 +268,7 @@ function loadScene(){
             });
             object = gltf.scene
             scene.add(object);
+            backcube = object.getObjectByName("Cube");
             meshEnterVHS = object.getObjectByName("vhs_enter");
             group.add(meshEnterVHS);
             group.add(object.getObjectByName("playbutton"));
@@ -342,7 +348,7 @@ function onDocumentMouseClick( event ) {
 function showHighlighted(){
     var intersects = getIntersects( );
     if ( intersects.length > 0 ) {
-            if (intersects[0].object.name != "display"){
+           
                 if (HIGHLIGHTED == null){
                     HIGHLIGHTED = intersects[0].object;
                     HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
@@ -355,7 +361,7 @@ function showHighlighted(){
                     HIGHLIGHTED.material.emissive = new THREE.Color( 0xffffff );
                     HIGHLIGHTED.material.emissiveIntensity = 0.02;
                 }
-            }
+            
     }
     else if(HIGHLIGHTED != null){
         HIGHLIGHTED.material.emissive = new THREE.Color( 0x000000 );
