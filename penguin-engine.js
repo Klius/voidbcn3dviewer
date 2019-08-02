@@ -7,7 +7,7 @@ var scene,camera,renderer,controls,ambientLight,gridHelper,spotLight,light,direc
 var screen;
 var group;
 var tv = {on:false}
-var vhsPlayer = {hasVHS:false,vhs:"none",playing:false,ejecting:false,stopped:false,rewind:false,forward:false};
+var vhsPlayer = {hasVHS:false,vhs:"none",playing:false,ejecting:false,stopped:false,rewind:false,forward:false,moveWait:0};
 var videos = [];
 var vtexs = [];
 //Controls
@@ -24,6 +24,8 @@ var crosshair;
 var meshEnterVHS;
 var droppingObjects = [];
 var backcube;
+//timing
+var delta,time,prevTime;
 function init(){
     /*var cubeloader = new THREE.CubeTextureLoader();
     var backTexture = new cubeloader.load([
@@ -207,15 +209,25 @@ function onWindowResize() {
 function animate() {
     fps.begin() 
    // setTimeout( function() {
-        requestAnimationFrame( animate );
-
+    requestAnimationFrame( animate );
+    updateDelta()
     //}, 1000 / 30 );
     //animation stuff goes here
     move();
     //directionalLight.position.copy( camera.position );
     renderer.render( scene, camera );
+    if (vhsPlayer.forward){
+        moveVideo(30*delta);
+    }else if (vhsPlayer.rewind){
+        moveVideo(-30*delta);
+    }
     fps.end()
     //document.getElementById("DEBUG").innerHTML = "<b>X:</b>"+camera.position.x+" <b>Y:</b>"+camera.position.y+" <b>Z:</b>"+camera.position.z;
+}
+function updateDelta(){
+    time = performance.now();
+    delta = ( time - prevTime ) / 1000;
+    prevTime = time;
 }
 function move(){
     if ( controls.isLocked === true ) {
@@ -223,8 +235,7 @@ function move(){
         raycaster.ray.origin.copy( controls.getObject().position );
          var intersections = raycaster.intersectObjects( objects );
         var onObject = intersections.length > 0;
-        var time = performance.now();
-        var delta = ( time - prevTime ) / 1000;
+
         velocity.x -= velocity.x * 10.0 * delta;
         velocity.z -= velocity.z * 10.0 * delta;
         velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
@@ -246,10 +257,9 @@ function move(){
             controls.getObject().position.y = 1;
             canJump = true;
         }
-        prevTime = time;
         showHighlighted();
         animateDrop(delta);
-        backcube.rotation.y+=0.5*delta;
+        //backcube.rotation.y+=0.5*delta;
     }
 }
 
@@ -277,6 +287,7 @@ function loadScene(){
             group.add(object.getObjectByName("forwardbutton"));
             group.add(object.getObjectByName("rewindbutton"));
             group.add(object.getObjectByName("stopbutton"));
+            group.add(object.getObjectByName("pausebutton"));
             group.add(object.getObjectByName("video-ashes"));
         },
         function ( xhr ) {
@@ -327,6 +338,17 @@ function onDocumentMouseClick( event ) {
                     }
                     else if(INTERSECTED.name=="stopbutton"){
                         stopVideo();
+                    }
+                    else if(INTERSECTED.name=="pausebutton"){
+                        pauseVideo();
+                    }
+                    else if(INTERSECTED.name=="forwardbutton"){
+                        vhsPlayer.forward = true;
+                        vhsPlayer.rewind = false;
+                    }
+                    else if(INTERSECTED.name=="rewindbutton"){
+                        vhsPlayer.rewind = true;
+                        vhsPlayer.forward = false;
                     }
                     else if(INTERSECTED.name =="video-ashes" ){
                         if (event.buttons == 1){
@@ -429,19 +451,37 @@ function startVideo(){
         }
         videos[vid].play();
         vhsPlayer.playing = true;
+        vhsPlayer.forward = false;
+        vhsPlayer.rewind = false;
     }
 }
 function stopVideo(){
-    if (vhsPlayer.hasVHS && vhsPlayer.playing){
+    if (vhsPlayer.hasVHS && vhsPlayer.playing 
+        || vhsPlayer.forward || vhsPlayer.rewind){
         var vid = getVideoFromId(vhsPlayer.vhs.name);
         videos[vid].pause();
         videos[vid].volume = 0;
         var mat = new THREE.MeshBasicMaterial({map:vtexs[0]});
         screen.material = mat;
-        videos[0].volume = 1;
-        videos[0].play();
+        if (tv.on){
+            videos[0].volume = 1;
+            videos[0].play();
+        }
+        vhsPlayer.playing = false;
+        vhsPlayer.forward = false;
+        vhsPlayer.rewind = false;
         vhsPlayer.playing = false;
         vhsPlayer.stopped = true;
+    }
+}
+function pauseVideo(){
+    if(vhsPlayer.hasVHS && vhsPlayer.playing 
+        || vhsPlayer.forward || vhsPlayer.rewind ){
+        var vid = getVideoFromId(vhsPlayer.vhs.name);
+        vhsPlayer.playing = false;
+        videos[vid].pause();
+        vhsPlayer.forward = false;
+        vhsPlayer.rewind = false;
     }
 }
 // FORWARD video.currentTime+5
@@ -483,6 +523,30 @@ function ejectVHS(){
         }
 
 
+    }
+}
+function moveVideo(amount){
+    vhsPlayer.moveWait +=delta;
+    if( (vhsPlayer.hasVHS) && (vhsPlayer.moveWait > 0.3)){
+        vhsPlayer.playing = false;
+        vhsPlayer.pause = false;
+        var vid = getVideoFromId(vhsPlayer.vhs.name);
+        videos[vid].pause();
+        var currentTime = videos[vid].currentTime;
+        currentTime += amount;
+        videos[vid].currentTime = currentTime.toPrecision(5);
+        if (currentTime < 0)
+        {
+            videos[vid].currentTime = 0;
+            vhsPlayer.rewind = false;
+            startVideo()
+        }
+        else if( videos[vid].duration-currentTime <3 ){
+            
+            videos[vid].currentTime = videos[vid].duration;
+            stopVideo();
+        }
+        vhsPlayer.moveWait = 0;
     }
 }
 function grab(object){
